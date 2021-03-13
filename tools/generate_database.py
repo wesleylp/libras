@@ -1,15 +1,12 @@
-import sys
-sys.path.append('../src/')
-
 import argparse
-import cv2
 import os
-import scipy.io as sio
-from tqdm import tqdm
+import pickle
 
-from utils.image import generate_gei
-from dataset.dataset import Dataset
 import numpy as np
+import scipy.io as sio
+from src.dataset.dataset import Dataset
+from src.utils.image import generate_gei
+from tqdm import tqdm
 
 CLASSES = {
     'ADME': 1,
@@ -52,10 +49,18 @@ if __name__ == "__main__":
 
     parser.add_argument("--output-dir",
                         type=str,
-                        default="/home/wesley.passos/repos/libras/src/matlab/gei",
+                        default="/home/wesley.passos/repos/libras/data/feats",
                         help="Directory to save the database generated")
 
-    parser.add_argument("--dim", type=int, default=100, help="Dimension to rescale GEI")
+    parser.add_argument("--output-format",
+                        type=str,
+                        default="python",
+                        help="Prepare database to use in python or matlab")
+
+    parser.add_argument("--dim",
+                        type=int,
+                        default=None,
+                        help="Dimension to rescale GEI. If not specified, do not perform rescale.")
 
     parser.add_argument("--words",
                         type=int,
@@ -65,7 +70,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nb_words = int(args.words)
-    dim = int(args.dim)
+
+    if args.dim is not None:
+        dim = (int(args.dim), int(args.dim))
+    else:
+        dim = 'same'
 
     if nb_words != 12 and nb_words != 24:
         raise ValueError("words must be 12 or 24: ", nb_words)
@@ -90,7 +99,7 @@ if __name__ == "__main__":
         if nb_words == 12 and CLASSES[video.word] not in INDEX12:
             continue
 
-        gei = generate_gei(video, output_dim=(dim, dim), body_parts=body_parts)
+        gei = generate_gei(video, output_dim=dim, body_parts=body_parts)
         label = CLASSES[video.word]
 
         data = dict()
@@ -101,11 +110,23 @@ if __name__ == "__main__":
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    dt = np.dtype([('sample', np.float32, (dim, dim)), ('label', (np.double, 1))])
-    arr = np.zeros((len(database), ), dtype=dt)
-    for idx, d in enumerate(database):
-        arr[idx]['sample'] = d['sample']
-        arr[idx]['label'] = d['label']
+    out_filename = f'database{nb_words}_gei_{gei.shape[0]}x{gei.shape[1]}'
 
-    mat_filename = f'database{nb_words}_gei_{dim}x{dim}.mat'
-    sio.savemat(os.path.join(args.output_dir, mat_filename), {'database': arr})
+    # save in .mat format
+    if args.output_format.lower() == 'matlab':
+        dt = np.dtype([('sample', np.float32, (gei.shape[0], gei.shape[1])),
+                       ('label', (np.double, 1))])
+        arr = np.zeros((len(database), ), dtype=dt)
+        for idx, d in enumerate(database):
+            arr[idx]['sample'] = d['sample']
+            arr[idx]['label'] = d['label']
+
+        sio.savemat(os.path.join(args.output_dir, f"{out_filename}.mat"), {'database': arr})
+
+    # save in pkl format
+    elif args.output_format.lower() == 'python':
+        with open(os.path.join(args.output_dir, f"{out_filename}.pkl"), 'wb') as f:
+            pickle.dump(database, f, pickle.HIGHEST_PROTOCOL)
+
+    else:
+        raise ValueError(f"Invalid output format {args.output_format}. Choose Matlab or Python")
