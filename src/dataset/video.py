@@ -1,19 +1,22 @@
-import os
-import subprocess
-import shlex
 import json
+import os
+import shlex
+import subprocess
 
 import cv2
+
 from .annotation import Annotation
 
 
 class Video(object):
-    def __init__(self, filepath):
+    def __init__(self, filepath, annotationpath=None):
         self.filepath = filepath
         self.video_name = os.path.basename(self.filepath)
         self.capture = cv2.VideoCapture(self.filepath)
         self.video_info = VideoInfo(self.filepath)
-        self.segmentation = Annotation(self.filepath.replace(".avi", ".json"))
+
+        if annotationpath is not None:
+            self.segmentation = Annotation(self.filepath.replace(".avi", ".json"))
 
         s = self.video_name.split('_')
         self.id = s[2].split('.')[0]

@@ -147,3 +147,14 @@ def generate_gei(video,
         gei = gei.clip(0., 1.)
 
     return gei
+
+
+def crop_person_img(img):
+
+    people_in = np.where(img > 0)
+    h_min = people_in[0].min()
+    h_max = people_in[0].max()
+    w_min = people_in[1].min()
+    w_max = people_in[1].max()
+
+    return img[h_min:h_max + 1, w_min:w_max + 1].copy()
