@@ -33,6 +33,9 @@ def run_on_video(video, model, extractor):
                                 total=(video.get_nb_frames() - 1)):
         annotations[f'frame_{frame_nb:03d}'] = dict()
 
+        # MINDS FRAMES ARE FULL HD, we resize it before run model
+        frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_CUBIC)
+
         outputs = model(frame)
         data = extractor(outputs['instances'])
 
