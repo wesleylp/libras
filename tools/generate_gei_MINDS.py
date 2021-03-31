@@ -64,7 +64,8 @@ def run_on_dataset(dataset,
 
     for video in tqdm(dataset, total=len(dataset)):
 
-        w, h = video.get_width_height()
+        # MINDS FRAMES ARE FULL HD, we resized it before run model
+        w, h = 640, 480
 
         path_save = os.path.dirname(video.filepath)
         path_save_segm = path_save.replace('MINDS-Libras_RGB-D',
