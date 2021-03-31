@@ -1,7 +1,4 @@
 import pandas as pd
-from skopt import BayesSearchCV
-from skopt.plots import plot_histogram, plot_objective
-from skopt.space import Categorical, Integer, Real
 
 
 def df_results(opt):

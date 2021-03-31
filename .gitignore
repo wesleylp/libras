@@ -294,3 +294,4 @@ data
 figs
 matlab/
 *.mat
+*.csv

@@ -1,5 +1,18 @@
+import os
+import sys
+
 import cv2
 import numpy as np
+
+this_filepath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
+
+from densepose.vis.base import CompoundVisualizer
+from densepose.vis.bounding_box import ScoredBoundingBoxVisualizer
+from densepose.vis.densepose import (DensePoseResultsContourVisualizer,
+                                     DensePoseResultsFineSegmentationVisualizer,
+                                     DensePoseResultsUVisualizer, DensePoseResultsVVisualizer)
+from densepose.vis.extractor import CompoundExtractor, create_extractor
 
 # for body parts see:
 # https://github.com/facebookresearch/DensePose/blob/master/challenge/2019_COCO_DensePose/data_format.md
@@ -158,3 +171,31 @@ def crop_person_img(img):
     w_max = people_in[1].max()
 
     return img[h_min:h_max + 1, w_min:w_max + 1].copy()
+
+
+VISUALIZERS = {
+    "dp_contour": DensePoseResultsContourVisualizer,
+    "dp_segm": DensePoseResultsFineSegmentationVisualizer,
+    "dp_u": DensePoseResultsUVisualizer,
+    "dp_v": DensePoseResultsVVisualizer,
+    "bbox": ScoredBoundingBoxVisualizer,
+}
+
+
+def create_context(vis_specs):
+    visualizers = []
+    extractors = []
+    for vis_spec in vis_specs:
+        vis = VISUALIZERS[vis_spec]()
+        visualizers.append(vis)
+        extractor = create_extractor(vis)
+        extractors.append(extractor)
+    visualizer = CompoundVisualizer(visualizers)
+    extractor = CompoundExtractor(extractors)
+    context = {
+        "extractor": extractor,
+        "visualizer": visualizer,
+        #             "out_fname": args.output,
+        #             "entry_idx": 0,
+    }
+    return context

@@ -31,14 +31,15 @@ class Dataset(object):
     def get_files(self):
         list_of_videos = []
         for ext in self._exts:
-            list_of_videos.extend(glob.glob(os.path.join(self._rootdir, f'*{ext}')))
+            list_of_videos.extend(
+                glob.glob(os.path.join(self._rootdir, f'**/*{ext}'), recursive=True))
         return list_of_videos
 
     def total_seconds(self):
         tot = 0
         for videopath in self.filepaths:
             video = Video(videopath)
-            tot += video.get_duration()
+            tot += video.get_durapytion()
 
         return tot
 
