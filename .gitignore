@@ -295,3 +295,5 @@ figs
 matlab/
 *.mat
 *.csv
+*.xml
+*.txt
