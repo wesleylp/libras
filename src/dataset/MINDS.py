@@ -4,7 +4,7 @@ import re
 
 import cv2
 
-from .video import Video, VideoInfo
+from video import Video, VideoInfo
 
 classes = {
     1: "Acontecer",
