@@ -1,11 +1,24 @@
 import glob
+import itertools
 import os
+import pickle
 import re
+import sys
 
 import cv2
+import numpy as np
+import sklearn
 
-from video import Video, VideoInfo
+from .annotation import Annotation
+from .video import Video, VideoInfo
 
+this_filepath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(this_filepath, '../detectron2/projects/DensePose/'))
+
+from src.utils.image import crop_person_img
+
+# it seems there is a mistake in the classes names from class 20 and so
+# on
 classes = {
     1: "Year 1",
     2: "Year 2",
@@ -140,22 +153,37 @@ class UFOPVideo(Video):
         self.capture = cv2.VideoCapture(self.filepath)
         self.video_info = VideoInfo(self.filepath)
 
-        s = self.video_name.split('_')
-        self.id = s[0]
-        self.category = s[1]
-        self.sequence = s[2]
-
         self.annotation = labels(labels_path)[self.video_name]
 
-        # TODO: implement segmentation loading
-        # if segmentation_path is not None:
-        #     self.segmentation = Annotation(self.filepath.replace(".avi", ".json"))
+        s = self.video_name.split('_')
+        self.id = int(s[0][1:])
+        self.category = s[1]
+        self.sequence = s[2]
+        self.word = self.get_word()
+        self.sign_id = self.get_sign_id()
+
+        if segmentation_path is not None:
+            segm_path = self.filepath.replace('LIBRAS-UFOP', 'LIBRAS-UFOP/segm')
+            self.segmentation = Annotation(segm_path.replace(".avi", ".json"))
 
     def get_movement_frames(self):
         return self.annotation['frames']
 
     def get_labels(self):
         return self.annotation['labels']
+
+    def get_sign_id(self):
+        sign_id = np.unique(self.get_labels())
+        assert len(sign_id) == 1, "Different labels in the same video"
+
+        # this is a `gambiarra` to fix the class 20 missing in the dataset
+        if sign_id > 20:
+            sign_id -= 1
+
+        return int(sign_id)
+
+    def get_word(self):
+        return classes[self.get_sign_id()]
 
 
 class UFOPDataset(object):
@@ -185,6 +213,97 @@ class UFOPDataset(object):
     def get_files(self):
         list_of_videos = (glob.glob(os.path.join(self._rootdir, '**/*Color.avi'), recursive=True))
         return list_of_videos
+
+    def _load_gei(self, subset='set_1', mode='train', categ="all"):
+        """Load the GEI features
+
+        Args:
+            subset (str, optional): select wich one of the 3 subsets will be loaded. Possible values: `set_n`, where n = {1,2,3}. Defaults to 'set_1'.
+            mode (str, optional): Select `train`, `val` or `test` set. Defaults to 'train'.
+            categ (str, optional): Select which category (see paper) `c_n`, where n={1,2,3,4} to be loaded or `all` to load all categories.  Defaults to "all".
+        """
+        def load_geis_in_path(datapath):
+            geis_paths = glob.glob(os.path.join(datapath, '*.pkl'), recursive=True)
+            data = []
+            for gei_path in geis_paths:
+                with open(gei_path, 'rb') as f:
+                    data.append(pickle.load(f))
+            return data
+
+        sinalizers_config = exp_set[subset][mode]
+
+        if categ.lower() != "all":
+            words_id_config = list(itertools.chain(*category[categ.upper()]))
+            list_of_words = [classes[w] for w in words_id_config]
+
+        else:
+            list_of_words = list(classes.values())
+
+        # include similar word in c2 category
+        if categ.lower() == 'c2':
+            list_of_words.append(classes[4])
+
+        # include similar word in c4 category
+        if categ.lower() == 'c4':
+            list_of_words.append(classes[21])
+
+        data = []
+        label = []
+        for vid_path in self.filepaths:
+            video = UFOPVideo(vid_path, self.__labels_path)
+
+            if video.id not in sinalizers_config or video.word not in list_of_words:
+                continue
+
+            else:
+                geis_path = os.path.dirname(video.filepath).replace("LIBRAS-UFOP",
+                                                                    "LIBRAS-UFOP/gei")
+                geis = load_geis_in_path(geis_path)
+                lbl = len(geis) * [video.sign_id]  # could be video.word
+
+                data.extend(geis)
+                label.extend(lbl)
+
+        return data, label
+
+    def load_features(self,
+                      subset='set_1',
+                      mode='train',
+                      categ="all",
+                      dim=None,
+                      crop_person=False,
+                      shuffle=True,
+                      flatten=True):
+
+        X, y = self._load_gei(subset=subset, mode=mode, categ=categ)
+
+        if shuffle:
+            X, y = sklearn.utils.shuffle(X, y, random_state=0)
+
+        if crop_person:
+            X = [crop_person_img(x).astype('float64') for x in X]
+
+        if dim is not None:
+            X = [cv2.resize(x, dim, interpolation=cv2.INTER_CUBIC).astype('float64') for x in X]
+
+        if flatten:
+            X = [x.flatten().astype('float64') for x in X]
+
+        X = np.array(X)
+        y = np.array(y)
+
+        return X, y
+
+
+def gen_cv(y_train, y_valid):
+    "Fix the validation set to be use in cross-validation"
+
+    train_indexes = -np.ones(y_train.shape[0])
+    valid_indexes = np.zeros(y_valid.shape[0])
+
+    all_indexes = np.concatenate((train_indexes, valid_indexes))
+
+    return sklearn.model_selection.PredefinedSplit(test_fold=all_indexes)
 
 
 def labels(labels_path):
@@ -221,3 +340,6 @@ if __name__ == "__main__":
 
     data = UFOPDataset("/home/wesley.passos/repos/libras/data/LIBRAS-UFOP",
                        "/home/wesley.passos/repos/libras/data/LIBRAS-UFOP/labels.txt")
+
+    a, b = data.load_features(categ='c2')
+    print(a)

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 this_filepath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
+sys.path.append(os.path.join(this_filepath, '../detectron2/projects/DensePose/'))
 
 from densepose.vis.base import CompoundVisualizer
 from densepose.vis.bounding_box import ScoredBoundingBoxVisualizer
