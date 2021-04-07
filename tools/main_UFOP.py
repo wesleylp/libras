@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+from datetime import datetime
 
 import cv2
 import matplotlib.pyplot as plt
@@ -89,7 +91,7 @@ def UFOP_fit(base_model,
     return opt, y_pred, score
 
 
-def main(category, dim, crop_person):
+def main(category, dim, crop_person, n_eval=16):
 
     # pipeline class is used as estimator to enable
     # search over different model types
@@ -109,26 +111,27 @@ def main(category, dim, crop_person):
 
     # (parameter space, # of evaluations)
     search_space = [
-        (svc_SVD_space, 1024),
+        (svc_SVD_space, n_eval),
     ]
 
     opt = dict()
     y_pred = dict()
-    score = dict()
+    best_score = dict()
+    time_elapsed = dict()
+
     subsets = ['set_1', 'set_2', 'set_3']
     for subset in subsets:
-        opt[subset], y_pred[subset], score[subset] = UFOP_fit(base_pipe,
-                                                              search_space,
-                                                              category=category,
-                                                              subset=subset,
-                                                              dim=dim,
-                                                              crop_person=crop_person,
-                                                              predict=True)
+        start_time = time.time()
+        opt[subset], y_pred[subset], best_score[subset] = UFOP_fit(base_pipe,
+                                                                   search_space,
+                                                                   category=category,
+                                                                   subset=subset,
+                                                                   dim=dim,
+                                                                   crop_person=crop_person,
+                                                                   predict=True)
+        time_elapsed[subset] = time.time - start_time
 
-    mean_score = np.array(list(score.values())).mean()
-    std_score = np.array(list(score.values())).std()
-
-    return opt, mean_score, std_score
+    return opt, best_score, time_elapsed
 
 
 if __name__ == "__main__":
@@ -143,22 +146,36 @@ if __name__ == "__main__":
                         help="Category: [`c1`, `c2`, `c3`, `c4` or `all`]")
     parser.add_argument("--res_path",
                         type=str,
-                        default=os.path.join(this_filepath, 'results', 'UFOP'),
+                        default=os.path.join(this_filepath, '..', 'results', 'UFOP'),
                         help="Directory to save results")
 
     parser.add_argument("--mod_path",
                         type=str,
-                        default=os.path.join(this_filepath, 'models', 'UFOP'),
+                        default=os.path.join(this_filepath, '..', 'models', 'UFOP'),
                         help="Directory to save models")
+
+    parser.add_argument("--n_eval",
+                        type=int,
+                        default=64,
+                        help="number of evaluations for bayesian optimization")
 
     crop_person = True
     dim = (64, 48)
 
     args = parser.parse_args()
-
-    opt, mean_score, std_score = main(category=args.category, dim=dim, crop_person=crop_person)
-
     os.makedirs(args.res_path, exist_ok=True)
+    os.makedirs(args.mod_path, exist_ok=True)
+
+    # results log
+    f = open(os.path.join(args.res_path, f'results_{args.category}.txt'), "a")
+    f.write('Experiment run on %s.\n' % datetime.now())
+    f.write(f'args: {args}\n\n')
+
+    start_time = time.time()
+    opt, best_score, run_time = main(category=args.category,
+                                     dim=dim,
+                                     crop_person=crop_person,
+                                     n_eval=args.n_eval)
 
     for subset in opt.keys():
         df = df_results(opt[subset])
@@ -166,8 +183,11 @@ if __name__ == "__main__":
 
         # del opt[subset].specs['args']['func']
 
-        dump(opt[subset], os.path.join(args.mod_path, f'{subset}.gz'))
+        f.write(f'{subset}: acc: {best_score[subset]} -- time elapsed: {run_time[subset]}\n')
+        dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
 
-    print(f"Results for: Category {args.category}")
-    print(f"Mean acc: {mean_score} +/- {std_score}")
-    print('end')
+    mean_score = np.array(list(best_score.values())).mean()
+    std_score = np.array(list(best_score.values())).std()
+    total_time = time.time() - start_time
+    f.write(f'Mean acc: {mean_score} +/- {std_score} -- elapsed time: {total_time} \n\n\n')
+    f.close()
