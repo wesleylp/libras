@@ -3,23 +3,21 @@ import sys
 import time
 from datetime import datetime
 
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.decomposition import TruncatedSVD
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
-from skopt import BayesSearchCV, dump, load
+from skopt import BayesSearchCV, dump
 from skopt.space import Categorical, Integer, Real
 
 this_filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
 
 from src.dataset.MINDS import MINDSDataset
-from src.utils.results import df_results
+from src.utils.results import df_results, save_pickle
 
 thisfile_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -39,13 +37,16 @@ def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
     y_pred = None
     score = None
     if predict:
-
         y_pred = model.predict(X_test)
         score = model.score(X_test, y_test)
 
         y_pred = le.inverse_transform(y_pred)
+        y_test = le.inverse_transform(y_test)
 
-    return model, y_pred, score
+        report = classification_report(y_test, y_pred, labels=np.unique(y_test))
+        cfn_mtx = confusion_matrix(y_test, y_pred)
+
+    return model, y_pred, score, report, cfn_mtx
 
 
 def main(dim=(64, 48),
@@ -99,15 +100,22 @@ def main(dim=(64, 48),
     model = dict()
     best_score = dict()
     elapsed_time = dict()
+    report = dict()
+    cfn_mtx = dict()
 
     for n_trial in range(n_trials):
         start_time = time.time()
-        model[f'trial_{n_trial}'], _, best_score[f'trial_{n_trial}'] = train_minds(
-            X, y, opt, test_size=0.25, random_state=n_trial, predict=True)
+        model[f'trial_{n_trial}'], _, best_score[f'trial_{n_trial}'], report[
+            f'trial_{n_trial}'], cfn_mtx[f'trial_{n_trial}'] = train_minds(X.copy(),
+                                                                           y.copy(),
+                                                                           opt,
+                                                                           test_size=0.25,
+                                                                           random_state=n_trial,
+                                                                           predict=True)
 
         elapsed_time[f'trial_{n_trial}'] = time.time() - start_time
 
-    return model, best_score, elapsed_time
+    return model, best_score, report, cfn_mtx, elapsed_time
 
 
 if __name__ == "__main__":
@@ -144,15 +152,16 @@ if __name__ == "__main__":
 
     # results log
     f = open(os.path.join(args.res_path, 'results.txt'), "a")
-    f.write('Experiment run on %s.\n' % datetime.now())
+    f.write('-' * 30)
+    f.write('\nExperiment run on %s.\n' % datetime.now())
     f.write(f'args: {args}\n\n')
 
     start_time = time.time()
-    opt, best_score, elapsed_time = main(dim=dim,
-                                         crop_person=crop_person,
-                                         exclude=exclude,
-                                         n_eval=args.n_eval,
-                                         n_trials=args.n_trials)
+    opt, best_score, report, cfn_mtx, elapsed_time = main(dim=dim,
+                                                          crop_person=crop_person,
+                                                          exclude=exclude,
+                                                          n_eval=args.n_eval,
+                                                          n_trials=args.n_trials)
 
     for trial in opt.keys():
         df = df_results(opt[trial])
@@ -160,13 +169,17 @@ if __name__ == "__main__":
 
         # del opt[trial].specs['args']['func']
 
-        f.write(f'{trial}: acc: {best_score[trial]} -- time elapsed: {elapsed_time[trial]}\n')
+        f.write(f'\n\n{trial}: acc: {best_score[trial]} -- time elapsed: {elapsed_time[trial]}\n')
+        f.write(f'{report[trial]}\n')
+        f.write(f'Confusion mtx:\n{cfn_mtx[trial]}\n')
+
         dump(opt[trial], os.path.join(args.mod_path, f'{trial}.gz'))
 
-    minds_dataset = MINDSDataset(os.path.join(this_filepath, "../data/MINDS-Libras_RGB-D/"))
+    save_pickle(report, os.path.join(args.res_path, 'report.pkl'))
+    save_pickle(cfn_mtx, os.path.join(args.res_path, 'cfn_mtx.pkl'))
 
     mean_score = np.array(list(best_score.values())).mean()
     std_score = np.array(list(best_score.values())).std()
     total_time = time.time() - start_time
-    f.write(f'Mean acc: {mean_score} +/- {std_score} -- elapsed time: {total_time} \n\n\n')
+    f.write(f'\nMean acc: {mean_score} +/- {std_score} -- elapsed time: {total_time} sec \n\n\n')
     f.close()

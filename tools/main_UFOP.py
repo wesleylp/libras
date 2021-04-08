@@ -3,22 +3,20 @@ import sys
 import time
 from datetime import datetime
 
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
-from skopt import BayesSearchCV, dump, load
+from skopt import BayesSearchCV, dump
 from skopt.space import Categorical, Integer, Real
 
 this_filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
 
 from src.dataset.UFOP import UFOPDataset, gen_cv, labels
-from src.utils.results import df_results
+from src.utils.results import df_results, save_pickle
 
 thisfile_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -82,13 +80,16 @@ def UFOP_fit(base_model,
                                                     crop_person=crop_person,
                                                     flatten=True)
         y_test = le.transform(y_test)
+        score = opt.score(x_test, y_test)
 
         y_pred = opt.predict(x_test)
         y_pred = le.inverse_transform(y_pred)
+        y_test = le.inverse_transform(y_test)
 
-        score = opt.score(x_test, y_test)
+        report = classification_report(y_test, y_pred, labels=np.unique(y_test))
+        cfn_mtx = confusion_matrix(y_test, y_pred)
 
-    return opt, y_pred, score
+    return opt, y_pred, score, report, cfn_mtx
 
 
 def main(category, dim, crop_person, n_eval=16):
@@ -118,20 +119,23 @@ def main(category, dim, crop_person, n_eval=16):
     y_pred = dict()
     best_score = dict()
     time_elapsed = dict()
+    report = dict()
+    cfn_mtx = dict()
 
     subsets = ['set_1', 'set_2', 'set_3']
     for subset in subsets:
         start_time = time.time()
-        opt[subset], y_pred[subset], best_score[subset] = UFOP_fit(base_pipe,
-                                                                   search_space,
-                                                                   category=category,
-                                                                   subset=subset,
-                                                                   dim=dim,
-                                                                   crop_person=crop_person,
-                                                                   predict=True)
-        time_elapsed[subset] = time.time - start_time
+        opt[subset], y_pred[subset], best_score[subset], report[subset], cfn_mtx[subset] = UFOP_fit(
+            base_pipe,
+            search_space,
+            category=category,
+            subset=subset,
+            dim=dim,
+            crop_person=crop_person,
+            predict=True)
+        time_elapsed[subset] = time.time() - start_time
 
-    return opt, best_score, time_elapsed
+    return opt, best_score, report, cfn_mtx, time_elapsed
 
 
 if __name__ == "__main__":
@@ -168,14 +172,15 @@ if __name__ == "__main__":
 
     # results log
     f = open(os.path.join(args.res_path, f'results_{args.category}.txt'), "a")
-    f.write('Experiment run on %s.\n' % datetime.now())
+    f.write('-' * 30)
+    f.write('\nExperiment run on %s.\n' % datetime.now())
     f.write(f'args: {args}\n\n')
 
     start_time = time.time()
-    opt, best_score, run_time = main(category=args.category,
-                                     dim=dim,
-                                     crop_person=crop_person,
-                                     n_eval=args.n_eval)
+    opt, best_score, report, cfn_mtx, run_time = main(category=args.category,
+                                                      dim=dim,
+                                                      crop_person=crop_person,
+                                                      n_eval=args.n_eval)
 
     for subset in opt.keys():
         df = df_results(opt[subset])
@@ -183,11 +188,17 @@ if __name__ == "__main__":
 
         # del opt[subset].specs['args']['func']
 
-        f.write(f'{subset}: acc: {best_score[subset]} -- time elapsed: {run_time[subset]}\n')
+        f.write(f'\n\n{subset}: acc: {best_score[subset]} -- time elapsed: {run_time[subset]}\n')
+        f.write(f'{report[subset]}\n')
+        f.write(f'Confusion mtx:\n{cfn_mtx[subset]}\n')
+
         dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
+
+    save_pickle(report, os.path.join(args.res_path, 'report.pkl'))
+    save_pickle(cfn_mtx, os.path.join(args.res_path, 'cfn_mtx.pkl'))
 
     mean_score = np.array(list(best_score.values())).mean()
     std_score = np.array(list(best_score.values())).std()
     total_time = time.time() - start_time
-    f.write(f'Mean acc: {mean_score} +/- {std_score} -- elapsed time: {total_time} \n\n\n')
+    f.write(f'Mean acc: {mean_score} +/- {std_score} -- elapsed time: {total_time} sec \n\n\n')
     f.close()
