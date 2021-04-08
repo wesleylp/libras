@@ -298,3 +298,4 @@ matlab/
 *.xml
 *.txt
 models/
+results/
