@@ -10,7 +10,8 @@ import sklearn
 this_filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_filepath, '../detectron2/projects/DensePose/'))
 
-from .utils.image import crop_person_img
+from src.utils.image import crop_person_img
+
 from .video import Video, VideoInfo
 
 classes = {
@@ -95,7 +96,12 @@ class MINDSDataset(object):
         list_of_videos = (glob.glob(os.path.join(self._rootdir, '**/*RGB.mp4'), recursive=True))
         return list_of_videos
 
-    def _load_gei(self, exclude=None):
+    def _load_gei(
+        self,
+        exclude=None,
+        dim=None,
+        crop_person=False,
+    ):
         """load gei features
 
         Args:
@@ -107,12 +113,9 @@ class MINDSDataset(object):
             Signalizer 03 and the word `Filho` of Signalizer 4.
             Defaults to None.
         """
-        def load_geis_in_path(datapath):
-            geis_paths = glob.glob(os.path.join(datapath, '*.pkl'), recursive=True)
-            data = []
-            for gei_path in geis_paths:
-                with open(gei_path, 'rb') as f:
-                    data.append(pickle.load(f))
+        def load_gei_in_path(datapath):
+            with open(datapath, 'rb') as f:
+                data = pickle.load(f)
             return data
 
         data = []
@@ -122,22 +125,23 @@ class MINDSDataset(object):
 
             if exclude is not None:
                 if video.id in exclude.keys():
-                    if exclude[video.id] == 'all':
+                    if exclude[video.id] == 'all' or video.word in exclude[
+                            video.id] or video.sign_id in exclude[video.id]:
                         continue
-                    elif video.word in exclude[video.id] or video.sign_id in exclude[video.id]:
-                        continue
 
-            # if video.id not in sinalizers_config or video.word not in list_of_words:
-            #     continue
+            gei_path = video.filepath.replace("MINDS-Libras_RGB-D", "MINDS-Libras_RGB-D/gei")
+            gei = load_gei_in_path(gei_path.replace('.mp4', '.pkl'))
 
-            # else:
-            geis_path = os.path.dirname(video.filepath).replace("MINDS-Libras_RGB-D",
-                                                                "MINDS-Libras_RGB-D/gei")
-            geis = load_geis_in_path(geis_path)
-            lbl = len(geis) * [video.sign_id]  # could be video.word
+            # we perform crop and reescale here because the original images are 1920x1080
+            # it saves memory
+            if crop_person:
+                gei = crop_person_img(gei).astype('float64')
 
-            data.extend(geis)
-            label.extend(lbl)
+            if dim is not None:
+                gei = cv2.resize(gei, dim, interpolation=cv2.INTER_CUBIC).astype('float64')
+
+            data.append(gei)
+            label.append(video.sign_id)  # could be video.word
 
         return data, label
 
@@ -152,16 +156,10 @@ class MINDSDataset(object):
                       shuffle=True,
                       flatten=True):
 
-        X, y = self._load_gei(exclude=exclude)
+        X, y = self._load_gei(exclude=exclude, dim=dim, crop_person=crop_person)
 
         if shuffle:
             X, y = sklearn.utils.shuffle(X, y, random_state=0)
-
-        if crop_person:
-            X = [crop_person_img(x).astype('float64') for x in X]
-
-        if dim is not None:
-            X = [cv2.resize(x, dim, interpolation=cv2.INTER_CUBIC).astype('float64') for x in X]
 
         if flatten:
             X = [x.flatten().astype('float64') for x in X]
@@ -174,10 +172,16 @@ class MINDSDataset(object):
 
 if __name__ == "__main__":
 
+    import time
+
     video = MINDSVideo(
         "/home/wesley.passos/repos/libras/data/MINDS-Libras_RGB-D/Sinalizador03/01Acontecer/3-01Acontecer_1RGB.mp4"
     )
 
-    data = MINDSDataset("/home/wesley.passos/repos/libras/data/MINDS-Libras_RGB-D")
+    minds_dataset = MINDSDataset("/home/wesley.passos/repos/libras/data/MINDS-Libras_RGB-D")
 
-    print(data)
+    st = time.time()
+    X, y = minds_dataset.load_features(dim=(64, 48), crop_person=True, shuffle=True, flatten=True)
+    print(f"elapsed time to load data: {time.time() - st} seconds")
+
+    print(minds_dataset)
