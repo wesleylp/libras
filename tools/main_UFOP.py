@@ -86,7 +86,7 @@ def UFOP_fit(base_model,
         y_pred = le.inverse_transform(y_pred)
         y_test = le.inverse_transform(y_test)
 
-        report = classification_report(y_test, y_pred, labels=np.unique(y_test))
+        report = classification_report(y_test, y_pred, labels=np.unique(y_test), zero_division=0)
         cfn_mtx = confusion_matrix(y_test, y_pred)
 
     return opt, y_pred, score, report, cfn_mtx
@@ -194,8 +194,8 @@ if __name__ == "__main__":
 
         dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
 
-    save_pickle(report, os.path.join(args.res_path, 'report.pkl'))
-    save_pickle(cfn_mtx, os.path.join(args.res_path, 'cfn_mtx.pkl'))
+    save_pickle(report, os.path.join(args.res_path, f'report_cat_{args.categoy}.pkl'))
+    save_pickle(cfn_mtx, os.path.join(args.res_path, f'cfn_mtx_cat_{args.categoy}.pkl'))
 
     mean_score = np.array(list(best_score.values())).mean()
     std_score = np.array(list(best_score.values())).std()

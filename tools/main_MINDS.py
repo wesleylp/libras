@@ -43,7 +43,7 @@ def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
         y_pred = le.inverse_transform(y_pred)
         y_test = le.inverse_transform(y_test)
 
-        report = classification_report(y_test, y_pred, labels=np.unique(y_test))
+        report = classification_report(y_test, y_pred, labels=np.unique(y_test), zero_division=0)
         cfn_mtx = confusion_matrix(y_test, y_pred)
 
     return model, y_pred, score, report, cfn_mtx
