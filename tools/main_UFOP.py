@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     for subset in opt.keys():
         df = df_results(opt[subset])
-        df.to_csv(os.path.join(args.res_path, f"{subset}.csv"))
+        df.to_csv(os.path.join(args.res_path, f"{args.category}_{subset}.csv"))
 
         # del opt[subset].specs['args']['func']
 
