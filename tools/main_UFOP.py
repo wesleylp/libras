@@ -194,8 +194,8 @@ if __name__ == "__main__":
 
         dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
 
-    save_pickle(report, os.path.join(args.res_path, f'report_cat_{args.categoy}.pkl'))
-    save_pickle(cfn_mtx, os.path.join(args.res_path, f'cfn_mtx_cat_{args.categoy}.pkl'))
+    save_pickle(report, os.path.join(args.res_path, f'report_cat_{args.category}.pkl'))
+    save_pickle(cfn_mtx, os.path.join(args.res_path, f'cfn_mtx_cat_{args.category}.pkl'))
 
     mean_score = np.array(list(best_score.values())).mean()
     std_score = np.array(list(best_score.values())).std()
