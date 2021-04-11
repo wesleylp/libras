@@ -3,6 +3,33 @@ import os
 
 from .video import Video
 
+CLASSES = {
+    1: 'scaffolding',
+    2: 'lover',
+    3: 'baby',
+    4: 'appointment',
+    5: 'dice',
+    6: 'depression',
+    7: 'elastic',
+    8: 'ghost',
+    9: 'impossible',
+    10: 'hammer',
+    11: 'miracle',
+    12: 'nacionality',
+    13: 'snow',
+    14: 'news',
+    15: 'ochestra',
+    16: 'patience',
+    17: 'wall',
+    18: 'compsing',
+    19: 'lightning',
+    20: 'surf',
+    21: 'television',
+    22: 'trampoline',
+    23: 'steam',
+    24: 'fast',
+}  # it comes from class.mat
+
 
 class Dataset(object):
     def __init__(self, rootdir, exts=('.avi')):
