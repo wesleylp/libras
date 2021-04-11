@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.stats import loguniform
 from sklearn.decomposition import TruncatedSVD
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from skopt.space import Categorical, Integer, Real
@@ -43,4 +45,16 @@ SVC_space = {
     'model__gamma': loguniform(1e-6, 1e+1),
     'model__degree': np.arange(1, 8, dtype=int),
     'model__kernel': ['linear', 'poly', 'rbf'],
+}
+
+KNN_space = {
+    'model': [KNeighborsClassifier()],
+    'model__n_neighbors': np.arange(1, 6, dtype=int),
+}
+
+RF_space = {
+    'model': [
+        RandomForestClassifier(max_depth=None, random_state=0, criterion='gini'),
+    ],
+    'model__n_estimators': np.arange(250, 400, dtype=int),
 }
