@@ -9,20 +9,28 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, RandomizedSearchCV, train_test_split
 from sklearn.preprocessing import LabelEncoder
 from skopt import BayesSearchCV, dump
+from src.utils.results import df_results, save_pickle
 from tqdm import tqdm
 
 this_filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
 
-from src.dataset.MINDS import MINDSDataset
-from src.utils.results import df_results, save_pickle
+from src.utils.bayes_optim import bayes_search
+from src.utils.feats import load_gei
+from src.utils.plot_config import set_plot_config
+from src.utils.results import df_results
 from src.utils.search_spaces import (SVC_space, SVC_space_bayes, SVD_space, SVD_space_bayes,
                                      base_pipe, base_pipe_reduction)
 
-thisfile_dir = os.path.abspath(os.path.dirname(__file__))
 
-
-def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
+def CEFET_fit(X,
+              y,
+              model,
+              dim=(64, 48),
+              crop_person=True,
+              test_size=0.25,
+              predict=False,
+              random_state=None):
 
     le = LabelEncoder()
     y = le.fit_transform(y)
@@ -52,26 +60,10 @@ def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
     return model, y_pred, score, report, cfn_mtx
 
 
-def main(dim=(64, 48),
-         crop_person=True,
-         exclude={
-             3: 'all',
-             4: ["Filho"],
-             9: 'all'
-         },
-         test_size=0.25,
-         n_eval=16,
-         n_trials=10,
-         optim='random'):
-    minds_dataset = MINDSDataset(os.path.join(this_filepath, "../data/MINDS-Libras_RGB-D/"))
+def main(dim=(64, 48), crop_person=True, test_size=0.25, n_eval=64, n_trials=10, optim='random'):
 
-    X, y = minds_dataset.load_features(
-        exclude=exclude,
-        dim=dim,
-        crop_person=crop_person,
-        shuffle=True,
-        flatten=True,
-    )
+    datapath = os.path.join(this_filepath, "../data/feats/database24_gei_480x640.pkl")
+    X, y = load_gei(datapath, dim=dim, crop_person=crop_person)
 
     ### Define MODEL and params search space ###
     n_splits = 3  # for param search in bayesian optimization
@@ -112,13 +104,16 @@ def main(dim=(64, 48),
 
     for n_trial in tqdm(range(n_trials)):
         start_time = time.time()
+
         model[f'trial_{n_trial}'], _, best_score[f'trial_{n_trial}'], report[
-            f'trial_{n_trial}'], cfn_mtx[f'trial_{n_trial}'] = train_minds(X.copy(),
-                                                                           y.copy(),
-                                                                           opt,
-                                                                           test_size=test_size,
-                                                                           random_state=n_trial,
-                                                                           predict=True)
+            f'trial_{n_trial}'], cfn_mtx[f'trial_{n_trial}'] = CEFET_fit(X,
+                                                                         y,
+                                                                         opt,
+                                                                         dim=dim,
+                                                                         crop_person=crop_person,
+                                                                         test_size=test_size,
+                                                                         predict=True,
+                                                                         random_state=n_trial)
 
         elapsed_time[f'trial_{n_trial}'] = time.time() - start_time
 
@@ -133,18 +128,18 @@ if __name__ == "__main__":
 
     parser.add_argument("--res_path",
                         type=str,
-                        default=os.path.join(this_filepath, '..', 'results', 'MINDS'),
+                        default=os.path.join(this_filepath, '..', 'results', 'CEFET'),
                         help="Directory to save results")
 
     parser.add_argument("--mod_path",
                         type=str,
-                        default=os.path.join(this_filepath, '..', 'models', 'MINDS'),
+                        default=os.path.join(this_filepath, '..', 'models', 'CEFET'),
                         help="Directory to save models")
 
     parser.add_argument("--n_eval",
                         type=int,
                         default=64,
-                        help="number of evaluations for bayesian optimization")
+                        help="number of evaluations for params optimization")
 
     parser.add_argument("--n_trials", type=int, default=10, help="number of runs of experiment")
 
@@ -160,7 +155,6 @@ if __name__ == "__main__":
 
     crop_person = True
     dim = (64, 48)
-    exclude = {3: 'all', 4: ["Filho"], 9: 'all'}
 
     args = parser.parse_args()
 
@@ -176,11 +170,9 @@ if __name__ == "__main__":
     start_time = time.time()
     opt, best_score, report, cfn_mtx, elapsed_time = main(dim=dim,
                                                           crop_person=crop_person,
-                                                          exclude=exclude,
                                                           test_size=args.test_size,
                                                           n_eval=args.n_eval,
-                                                          n_trials=args.n_trials,
-                                                          optim=args.optim)
+                                                          n_trials=args.n_trials)
 
     for trial in opt.keys():
         df = df_results(opt[trial])

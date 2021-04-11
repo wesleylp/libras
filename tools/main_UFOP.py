@@ -3,20 +3,25 @@ import sys
 import time
 from datetime import datetime
 
+import joblib
 import numpy as np
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import KFold, RandomizedSearchCV, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
 from skopt import BayesSearchCV, dump
 from skopt.space import Categorical, Integer, Real
+from tqdm import tqdm
 
 this_filepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_filepath, '../src/detectron2/projects/DensePose/'))
 
 from src.dataset.UFOP import UFOPDataset, gen_cv, labels
 from src.utils.results import df_results, save_pickle
+from src.utils.search_spaces import (SVC_space, SVC_space_bayes, SVD_space, SVD_space_bayes,
+                                     base_pipe, base_pipe_reduction)
 
 thisfile_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -27,6 +32,8 @@ def UFOP_fit(base_model,
              subset,
              dim=(64, 48),
              crop_person=True,
+             optim='random',
+             n_eval=16,
              predict=False):
 
     ufop_dir = os.path.join(this_filepath, '../data/LIBRAS-UFOP')
@@ -60,16 +67,23 @@ def UFOP_fit(base_model,
     le = LabelEncoder()
     y = le.fit_transform(y)
 
-    opt = BayesSearchCV(
-        base_model,
-        # (parameter space, # of evaluations)
-        search_space,
-        cv=cv)
+    if optim.lower() == 'bayesian':
+        opt = BayesSearchCV(
+            base_model,
+            # (parameter space, # of evaluations)
+            search_space,
+            cv=cv)
+
+    elif optim.lower() == 'random':
+        opt = RandomizedSearchCV(base_model, search_space, n_iter=n_eval, scoring='accuracy', cv=cv)
 
     opt.fit(X, y)
 
     y_pred = None
     score = None
+    report = None
+    cfn_mtx = None
+
     if predict:
 
         x_test, y_test = ufop_dataset.load_features(subset=subset,
@@ -92,28 +106,24 @@ def UFOP_fit(base_model,
     return opt, y_pred, score, report, cfn_mtx
 
 
-def main(category, dim, crop_person, n_eval=16):
+def main(category, dim, crop_person, n_eval=16, optim='random'):
 
     # pipeline class is used as estimator to enable
     # search over different model types
-    base_pipe = Pipeline([('reduction', PCA()), ('model', SVC())])
 
-    svc_SVD_space = {
-        'reduction': Categorical([
-            TruncatedSVD(random_state=0),
-        ]),
-        'reduction__n_components': Integer(2, 150),
-        'model': Categorical([SVC()]),
-        'model__C': Real(1e-6, 1e+6, prior='log-uniform'),
-        'model__gamma': Real(1e-6, 1e+1, prior='log-uniform'),
-        'model__degree': Integer(1, 8),
-        'model__kernel': Categorical(['linear', 'poly', 'rbf']),
-    }
+    pipe = base_pipe_reduction
+    if optim.lower() == 'bayesian':
+        red_space = SVD_space_bayes
+        cls_space = SVC_space_bayes
 
-    # (parameter space, # of evaluations)
-    search_space = [
-        (svc_SVD_space, n_eval),
-    ]
+    elif optim.lower() == 'random':
+        red_space = SVD_space
+        cls_space = SVC_space
+
+    else:
+        raise ValueError(f"`optim` must be `bayesian` or `random`: {optim}")
+
+    search_space = {**red_space, **cls_space}
 
     opt = dict()
     y_pred = dict()
@@ -123,15 +133,17 @@ def main(category, dim, crop_person, n_eval=16):
     cfn_mtx = dict()
 
     subsets = ['set_1', 'set_2', 'set_3']
-    for subset in subsets:
+    for subset in tqdm(subsets):
         start_time = time.time()
         opt[subset], y_pred[subset], best_score[subset], report[subset], cfn_mtx[subset] = UFOP_fit(
-            base_pipe,
+            pipe,
             search_space,
             category=category,
             subset=subset,
             dim=dim,
             crop_person=crop_person,
+            optim=optim,
+            n_eval=n_eval,
             predict=True)
         time_elapsed[subset] = time.time() - start_time
 
@@ -163,6 +175,11 @@ if __name__ == "__main__":
                         default=64,
                         help="number of evaluations for bayesian optimization")
 
+    parser.add_argument("--optim",
+                        type=str,
+                        default='random',
+                        help="Method to optimize hyperparams.")
+
     crop_person = True
     dim = (64, 48)
 
@@ -180,7 +197,8 @@ if __name__ == "__main__":
     opt, best_score, report, cfn_mtx, run_time = main(category=args.category,
                                                       dim=dim,
                                                       crop_person=crop_person,
-                                                      n_eval=args.n_eval)
+                                                      n_eval=args.n_eval,
+                                                      optim=args.optim)
 
     for subset in opt.keys():
         df = df_results(opt[subset])
@@ -192,7 +210,12 @@ if __name__ == "__main__":
         f.write(f'{report[subset]}\n')
         f.write(f'Confusion mtx:\n{cfn_mtx[subset]}\n')
 
-        dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
+        if args.optim.lower() == 'bayesian':
+            dump(opt[subset], os.path.join(args.mod_path, f'cat_{args.category}_{subset}.gz'))
+
+        else:
+            joblib.dump(opt[subset], os.path.join(args.mod_path,
+                                                  f'cat_{args.category}_{subset}.sav'))
 
     save_pickle(report, os.path.join(args.res_path, f'report_cat_{args.category}.pkl'))
     save_pickle(cfn_mtx, os.path.join(args.res_path, f'cfn_mtx_cat_{args.category}.pkl'))
