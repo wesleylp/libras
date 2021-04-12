@@ -10,6 +10,13 @@ def save_pickle(obj, filename):
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 
+def open_pickle(filename):
+    with open(filename, 'rb') as f:
+        p = pickle.load(f)
+
+    return p
+
+
 def df_results(opt):
     df = pd.DataFrame(opt.cv_results_['params'])
     # df.rename(columns = {0:'param_model'}, inplace = True)
@@ -46,6 +53,23 @@ def normalize_cfn_mtx(mtx, by='true'):
         ValueError(f'`by` is invalid must be `true`, `pred`, or `all`: {by}')
 
     return mtx / norm_factor
+
+
+def compute_mean_mtx(cfn_mtx_dict, normalize=None):
+
+    cfn_mean = np.zeros_like(list(cfn_mtx_dict.values())[0], dtype=float)
+    all_diags = []
+
+    for key, mtx in cfn_mtx_dict.items():
+        if normalize is not None:
+            mtx = normalize_cfn_mtx(mtx, by=normalize)
+
+        cfn_mean += mtx
+        all_diags.append(mtx.diagonal())
+
+    cfn_mean = cfn_mean/len(cfn_mtx_dict)
+
+    return cfn_mean, all_diags
 
 
 def show_values(pc, fmt="%.2f", **kw):
@@ -103,7 +127,7 @@ def heatmap(AUC,
     c = ax.pcolor(AUC,
                   edgecolors='k',
                   linestyle='dashed',
-                  linewidths=0.2,
+                  linewidths=0.1,
                   cmap=cmap,
                   vmin=0.0,
                   vmax=1.0)
