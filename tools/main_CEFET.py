@@ -40,7 +40,11 @@ def CEFET_fit(X,
                                                         test_size=test_size,
                                                         random_state=random_state)
 
+    del X, y
+
     model.fit(X_train, y_train)
+
+    del X_train, y_train
 
     y_pred = None
     score = None
@@ -83,7 +87,8 @@ def main(dim=(64, 48), crop_person=True, test_size=0.25, n_eval=64, n_trials=10,
                 (search_space, n_eval),
             ],
             scoring='accuracy',
-            cv=cv)
+            cv=cv,
+            random_state=0)
 
     elif optim.lower() == 'random':
         red_space = SVD_space
@@ -91,7 +96,13 @@ def main(dim=(64, 48), crop_person=True, test_size=0.25, n_eval=64, n_trials=10,
 
         search_space = {**red_space, **cls_space}
 
-        opt = RandomizedSearchCV(pipe, search_space, n_iter=n_eval, scoring='accuracy', cv=cv)
+        opt = RandomizedSearchCV(pipe,
+                                 search_space,
+                                 n_iter=n_eval,
+                                 scoring='accuracy',
+                                 cv=cv,
+                                 n_jobs=-1,
+                                 random_state=0)
 
     else:
         raise ValueError(f"`optim` must be `bayesian` or `random`: {optim}")

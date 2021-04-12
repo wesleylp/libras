@@ -36,7 +36,7 @@ SVD_space = {
 
 SVC_space = {
     'model': [
-        SVC(),
+        SVC(random_state=0),
     ],
     'model__C': loguniform(
         1e-6,

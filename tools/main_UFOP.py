@@ -72,10 +72,17 @@ def UFOP_fit(base_model,
             base_model,
             # (parameter space, # of evaluations)
             search_space,
-            cv=cv)
+            cv=cv,
+            random_state=0)
 
     elif optim.lower() == 'random':
-        opt = RandomizedSearchCV(base_model, search_space, n_iter=n_eval, scoring='accuracy', cv=cv)
+        opt = RandomizedSearchCV(base_model,
+                                 search_space,
+                                 n_iter=n_eval,
+                                 scoring='accuracy',
+                                 cv=cv,
+                                 random_state=0,
+                                 n_jobs=-1)
 
     opt.fit(X, y)
 

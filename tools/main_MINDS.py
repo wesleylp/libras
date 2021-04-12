@@ -91,7 +91,8 @@ def main(dim=(64, 48),
                 (search_space, n_eval),
             ],
             scoring='accuracy',
-            cv=cv)
+            cv=cv,
+            random_state=0)
 
     elif optim.lower() == 'random':
         red_space = SVD_space
@@ -99,7 +100,13 @@ def main(dim=(64, 48),
 
         search_space = {**red_space, **cls_space}
 
-        opt = RandomizedSearchCV(pipe, search_space, n_iter=n_eval, scoring='accuracy', cv=cv)
+        opt = RandomizedSearchCV(pipe,
+                                 search_space,
+                                 n_iter=n_eval,
+                                 scoring='accuracy',
+                                 cv=cv,
+                                 random_state=0,
+                                 n_jobs=-1)
 
     else:
         raise ValueError(f"`optim` must be `bayesian` or `random`: {optim}")
