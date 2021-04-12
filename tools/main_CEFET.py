@@ -183,7 +183,8 @@ if __name__ == "__main__":
                                                           crop_person=crop_person,
                                                           test_size=args.test_size,
                                                           n_eval=args.n_eval,
-                                                          n_trials=args.n_trials)
+                                                          n_trials=args.n_trials,
+                                                          optim=args.optim)
 
     for trial in opt.keys():
         df = df_results(opt[trial])
