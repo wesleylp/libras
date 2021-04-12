@@ -37,6 +37,29 @@ classes = {
     20: "Vontade",
 }
 
+CLASSES_en = {
+    1: "to happen",
+    2: "student",
+    3: "yellow",
+    4: "america",
+    5: "to enjoy",
+    6: "candy",
+    7: "bank",
+    8: "bathroom",
+    9: "noise",
+    10: "five",
+    11: "to know",
+    12: "mirror",
+    13: "corner",
+    14: "son",
+    15: "apple",
+    16: "fear",
+    17: "bad",
+    18: "frog",
+    19: "vaccine",
+    20: "will",
+}
+
 
 class MINDSVideo(Video):
     def __init__(self, filepath):
