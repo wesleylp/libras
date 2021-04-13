@@ -33,6 +33,7 @@ def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
                                                         random_state=random_state)
 
     model.fit(X_train, y_train)
+    del X_train, y_train
 
     y_pred = None
     score = None
@@ -42,12 +43,14 @@ def train_minds(X, y, model, test_size=0.25, random_state=None, predict=False):
     if predict:
         y_pred = model.predict(X_test)
         score = model.score(X_test, y_test)
+        del X_test
 
         y_pred = le.inverse_transform(y_pred)
         y_test = le.inverse_transform(y_test)
 
         report = classification_report(y_test, y_pred, labels=np.unique(y_test), zero_division=0)
         cfn_mtx = confusion_matrix(y_test, y_pred)
+        del y_test
 
     return model, y_pred, score, report, cfn_mtx
 
@@ -120,8 +123,8 @@ def main(dim=(64, 48),
     for n_trial in tqdm(range(n_trials)):
         start_time = time.time()
         model[f'trial_{n_trial}'], _, best_score[f'trial_{n_trial}'], report[
-            f'trial_{n_trial}'], cfn_mtx[f'trial_{n_trial}'] = train_minds(X.copy(),
-                                                                           y.copy(),
+            f'trial_{n_trial}'], cfn_mtx[f'trial_{n_trial}'] = train_minds(X,
+                                                                           y,
                                                                            opt,
                                                                            test_size=test_size,
                                                                            random_state=n_trial,
