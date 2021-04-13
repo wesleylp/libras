@@ -6,7 +6,7 @@
 ![overview](https://github.com/wesleylp/libras/blob/master/.figures/system_overview.png?raw=true)
 
 
-![GEI](https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI?raw=true)
+![GEI](https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true)
 
 
 ## Results
