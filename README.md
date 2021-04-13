@@ -9,6 +9,8 @@
 ![GEI](https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true)
 
 
+![cls pipeline](https://github.com/wesleylp/libras/blob/master/.figures/classification_pipeline.png?raw=true)
+
 ## Results
 
 ### CEFET/RJ-Libras
