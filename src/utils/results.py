@@ -67,9 +67,35 @@ def compute_mean_mtx(cfn_mtx_dict, normalize=None):
         cfn_mean += mtx
         all_diags.append(mtx.diagonal())
 
-    cfn_mean = cfn_mean/len(cfn_mtx_dict)
+    cfn_mean = cfn_mean / len(cfn_mtx_dict)
 
     return cfn_mean, all_diags
+
+
+def multiclass_mcc(mtx):
+    """Compute multiclass Mathews correlation coefficient from confusion matix. It assumes the the predict are in cols and true labes in the rows.
+
+    Args:
+        mtx (np.array): confusion matrix
+
+    Returns:
+        float: Mathews correlation coefficient
+    """
+
+    # assuming predicted in cols and true labels in rows
+    # ref: https://scikit-learn.org/stable/modules/model_evaluation.html#matthews-corrcoef
+
+    t_k = mtx.sum(axis=1)  # the number of times class k truly occurred
+    p_k = mtx.sum(axis=0)  # the number of times class k was predicted
+    c = np.diag(mtx).sum()  # the total number of samples correctly predicted
+    s = mtx.sum()  # the total number of samples.
+
+    num = c * s - np.sum(np.multiply(p_k, t_k))
+    den = np.sqrt((s**2 - np.sum(p_k**2)) * (s**2 - np.sum(t_k**2)))
+
+    mcc = num / den
+
+    return mcc
 
 
 def show_values(pc, fmt="%.2f", **kw):
