@@ -297,5 +297,5 @@ matlab/
 *.csv
 *.xml
 *.txt
-models/
-results/
+models
+results
