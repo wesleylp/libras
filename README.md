@@ -1,10 +1,12 @@
 # A Gait Energy Image-Based System for Brazilian Sign Language Recognition
 
-- [A Gait Energy Image-Based System for Brazilian Sign Language Recognition](#a-gait-energy-image-based-system-for-brazilian-sign-language-recognition)
-  - [Overview](#overview)
-  - [Databases](#databases)
-  - [Results](#results)
-  - [Citation](#citation)
+- [Overview](#overview)
+- [Databases](#databases)
+- [Results](#results)
+  - [CEFET/RJ-Libras](#results-cefet)
+  - [MINDS-Libras](#results-minds)
+  - [LIBRAS-UFOP-ISO](#results-ufop)
+- [Citation](#citation)
 
 <a name="overview"></a>
 
@@ -18,7 +20,7 @@ This work addresses the problem of Libras recognition in video. The overview of 
 The system employs a two-step method with feature space mapping and classification. First, we segment the body parts of each subject in a video through [DensePose](https://github.com/facebookresearch/detectron2/tree/master/projects/DensePose) estimation model. Then, we use Gait Energy Image (GEI) to encode the motion of the body parts in a compact feature space, as illustrated in the Figure below.
 
 <p align="center">
-<img src="https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true" align="center"/></p>
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true" align="center" width="600"/></p>
 
 The pipeline used in the classification step is illustrated in the Figure below. The input is the GEI representation that is cropped in the region of interest that contains movement. The cropped samples are then reshaped to a smaller size, while keeping the aspect ratio of the original video frames. We employ dimensionality reduction (or SMOTE) as a solution to the curse of dimensionality. After the dimensionality reduction (or data augmentation), the samples are submitted to a classification pipeline.
 
@@ -45,13 +47,13 @@ We perform experiments on three challenging Brazilian sign language (Libras) dat
 <summary>CEFET/RJ-Libras</summary>
 
 <p align="center">
-<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_CEFET.png?raw=true" align="center" width="400"/></p>
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_CEFET.png?raw=true" align="center" width="300"/></p>
 
 <p align="center">
 <img src="https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_CEFET.png?raw=true" align="center" width="400"/></p>
 
 <p align="center">
-<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_CEFET.png?raw=true" align="center" width="400"/></p>
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_CEFET.png?raw=true" align="center" width="300"/></p>
 
 </details>
 
@@ -60,13 +62,13 @@ We perform experiments on three challenging Brazilian sign language (Libras) dat
 <summary>MINDS-Libras</summary>
 
 <p align="center">
-<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_MINDS.png?raw=true" align="center" width="400"/></p>
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_MINDS.png?raw=true" align="center" width="300"/></p>
 
 <p align="center">
 <img src="https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_MINDS.png?raw=true" align="center" width="400"/></p>
 
 <p align="center">
-<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_MINDS.png?raw=true" align="center" width="400"/></p>
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_MINDS.png?raw=true" align="center" width="300"/></p>
 
 </details>
 
