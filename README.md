@@ -1,12 +1,10 @@
 # A Gait Energy Image-Based System for Brazilian Sign Language Recognition
 
-- [Overview](#overview)
-- [Databases](#databases)
-- [Results](#results)
-  - [CEFET/RJ-Libras](#results-cefet)
-  - [MINDS-Libras](#results-minds)
-  - [LIBRAS-UFOP-ISO](#results-ufop)
-- [Citation](#citation)
+- [A Gait Energy Image-Based System for Brazilian Sign Language Recognition](#a-gait-energy-image-based-system-for-brazilian-sign-language-recognition)
+  - [Overview](#overview)
+  - [Databases](#databases)
+  - [Results](#results)
+  - [Citation](#citation)
 
 <a name="overview"></a>
 
@@ -14,17 +12,19 @@
 
 This work addresses the problem of Libras recognition in video. The overview of the proposed system is shown in the Figure below.
 
-![overview](https://github.com/wesleylp/libras/blob/master/.figures/system_overview.png?raw=true)
-
-
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/system_overview.png?raw=true" align="center"/></p>
 
 The system employs a two-step method with feature space mapping and classification. First, we segment the body parts of each subject in a video through [DensePose](https://github.com/facebookresearch/detectron2/tree/master/projects/DensePose) estimation model. Then, we use Gait Energy Image (GEI) to encode the motion of the body parts in a compact feature space, as illustrated in the Figure below.
 
-![GEI](https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/generate_GEI.png?raw=true" align="center"/></p>
 
 The pipeline used in the classification step is illustrated in the Figure below. The input is the GEI representation that is cropped in the region of interest that contains movement. The cropped samples are then reshaped to a smaller size, while keeping the aspect ratio of the original video frames. We employ dimensionality reduction (or SMOTE) as a solution to the curse of dimensionality. After the dimensionality reduction (or data augmentation), the samples are submitted to a classification pipeline.
 
-![cls pipeline](https://github.com/wesleylp/libras/blob/master/.figures/classification_pipeline.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/classification_pipeline.png?raw=true" align="center" width="400"/></p>
+
 
 <a name="databases"></a>
 
@@ -41,28 +41,49 @@ The pipeline used in the classification step is illustrated in the Figure below.
 We perform experiments on three challenging Brazilian sign language (Libras) datasets, CEFET/RJ-Libras, MINDS-Libras, and LIBRAS-UFOP.
 
 <a name="results-cefet"></a>
+<details>
+<summary>CEFET/RJ-Libras</summary>
 
-### CEFET/RJ-Libras
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_CEFET.png?raw=true" align="center" width="400"/></p>
 
-![metrics CEFET](https://github.com/wesleylp/libras/blob/master/.figures/metrics_CEFET.png?raw=true) ![cfn mtx CEFET](https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_CEFET.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_CEFET.png?raw=true" align="center" width="400"/></p>
 
-![boxplot CEFET](https://github.com/wesleylp/libras/blob/master/.figures/boxplot_CEFET.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_CEFET.png?raw=true" align="center" width="400"/></p>
+
+</details>
 
 <a name="results-minds"></a>
+<details>
+<summary>MINDS-Libras</summary>
 
-### MINDS-Libras
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_MINDS.png?raw=true" align="center" width="400"/></p>
 
-![metrics MINDS](https://github.com/wesleylp/libras/blob/master/.figures/metrics_MINDS.png?raw=true) ![cfn mtx MINDS](https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_MINDS.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_MINDS.png?raw=true" align="center" width="400"/></p>
 
-![boxplot MINDS](https://github.com/wesleylp/libras/blob/master/.figures/boxplot_MINDS.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_MINDS.png?raw=true" align="center" width="400"/></p>
+
+</details>
 
 <a name="results-ufop"></a>
+<details>
+<summary> LIBRAS-UFOP-ISO </summary>
 
-### LIBRAS-UFOP-ISO
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/metrics_UFOP.png?raw=true" align="center" width="400"/></p>
 
-![metrics UFOP](https://github.com/wesleylp/libras/blob/master/.figures/metrics_UFOP.png?raw=true) ![cfn mtx UFOP](https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_UFOP.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/cfnmtx_UFOP.png?raw=true" align="center" width="400"/></p>
 
-![boxplot UFOP](https://github.com/wesleylp/libras/blob/master/.figures/boxplot_UFOP.png?raw=true)
+<p align="center">
+<img src="https://github.com/wesleylp/libras/blob/master/.figures/boxplot_UFOP.png?raw=true" align="center" width="400"/></p>
+
+</details>
 
 <a name="citation"></a>
 
