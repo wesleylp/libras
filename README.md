@@ -91,7 +91,7 @@ We perform experiments on three challenging Brazilian sign language (Libras) dat
 
 ## Citation
 
-This work was published in the [IEEE Transactions on Circuit and Systems I: Regular Papers (TCAS-I) - Special Issue on Regional Flagship Conferences of the IEEE Circuits and Systems Society ](https://ieee-cas.org/pubs/tcas1).
+This work was published in the [IEEE Transactions on Circuit and Systems I: Regular Papers (TCAS-I) - Special Issue on Regional Flagship Conferences of the IEEE Circuits and Systems Society ](https://ieeexplore.ieee.org/document/9466162).
 
 If you use this code for your research, please consider citing:
 
